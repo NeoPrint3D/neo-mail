@@ -293,7 +293,7 @@ export async function forwardInboundEmail(
 	}
 
 	const origFromAddr = parsed.from?.address ? normalizeAddress(parsed.from.address) : "";
-	const origFromName = parsed.from?.name?.trim() || origFromAddr;
+	const origFromName = (parsed.from?.name?.trim() || origFromAddr).replace(/[\r\n<>"]/g, "").slice(0, 80);
 	const origReplyTo = parsed.replyTo?.[0]?.address ? normalizeAddress(parsed.replyTo[0].address) : origFromAddr;
 	const forwardedChain = [...priorAddresses, recipient].join(", ");
 
@@ -305,18 +305,21 @@ export async function forwardInboundEmail(
 		...(parsed.html ? { html: parsed.html } : {}),
 		...(parsed.text ? { text: parsed.text } : (!parsed.html ? { text: "" } : {})),
 		headers: {
-			"Auto-Submitted": "auto-forwarded",
+			"Auto-Submitted": env.platform === "cloudflare" ? "auto-generated" : "auto-forwarded",
 			"X-Original-To": recipient,
 			"X-Agentic-Forwarded-For": forwardedChain,
 			"X-Agentic-Hop": String((Number.isFinite(hopHeader) ? hopHeader : 0) + 1),
+			...(env.platform === "cloudflare" ? { "X-Auto-Forwarded": "true" } : {}),
 		},
-		attachments: parsed.attachments?.map((att) => ({
-			filename: att.filename || "attachment",
-			content: (typeof att.content === "string" ? Buffer.from(att.content) : Buffer.from(att.content)).toString("base64"),
-			type: att.mimeType,
-			disposition: att.disposition === "inline" ? "inline" : "attachment",
-			contentId: att.contentId || undefined,
-		})),
+		...(parsed.attachments?.length ? {
+			attachments: parsed.attachments.map((att) => ({
+				filename: att.filename || "attachment",
+				content: (typeof att.content === "string" ? Buffer.from(att.content) : Buffer.from(att.content)).toString("base64"),
+				type: att.mimeType,
+				disposition: att.disposition === "inline" ? "inline" : "attachment",
+				contentId: att.contentId || undefined,
+			})),
+		} : {}),
 	});
 	return { forwardedTo: filteredTargets };
 }

@@ -117,4 +117,15 @@
   .settings-dialog { top: auto; bottom: 0; left: env(safe-area-inset-left); right: env(safe-area-inset-right); translate: none; width: auto; min-width: 0; max-width: none; max-height: calc(100dvh - env(safe-area-inset-top) - 0.65rem); padding: 1rem .9rem calc(1rem + env(safe-area-inset-bottom)); border-radius: 1.05rem 1.05rem 0 0; }
   [data-keyboard="open"] :is(.settings-dialog, .app-dialog) { top: calc(var(--keyboard-viewport-top) + .35rem); bottom: auto; max-height: calc(var(--keyboard-viewport-height) - .65rem); }
 }
-@media (prefers-reduced-motion: reduce) { .phone-drawer { transition: none; } }
+.mail-swipe-row { position: relative; overflow: hidden; }
+.mail-swipe-backdrop { position: absolute; inset: 0; display: flex; align-items: center; padding-inline: 1.15rem; font-size: .84rem; font-weight: 660; pointer-events: none; }
+.mail-swipe-backdrop[data-side="left"] { justify-content: flex-start; }
+.mail-swipe-backdrop[data-side="right"] { justify-content: flex-end; }
+.mail-swipe-backdrop[data-tone="danger"] { background: var(--mail-danger-bg); color: var(--text-color-kumo-danger); }
+.mail-swipe-backdrop[data-tone="accent"] { background: var(--mail-select-bg); color: var(--text-color-kumo-link); }
+.mail-swipe-backdrop[data-armed="false"] .mail-swipe-action { opacity: .68; transform: scale(.96); }
+.mail-swipe-backdrop[data-armed="true"] .mail-swipe-action { opacity: 1; transform: scale(1); }
+.mail-swipe-action { display: inline-flex; align-items: center; gap: .42rem; transition: opacity 120ms ease, transform 120ms ease; }
+.mail-swipe-surface { position: relative; z-index: 1; touch-action: pan-y; transition: transform 180ms ease-out; }
+.mail-swipe-row[data-swiping="true"] .mail-swipe-surface { transition: none; }
+@media (prefers-reduced-motion: reduce) { .phone-drawer, .mail-swipe-surface, .mail-swipe-action { transition: none; } }

@@ -85,8 +85,10 @@ function environment(bindings: Bindings, ctx: ExecutionContext, requestIp?: stri
 		DNS: dohResolver(),
 		SEND_EMAIL: bindings.EMAIL && (({ attachments, ...message }) => bindings.EMAIL!.send({
 			...message,
-			attachments: attachments?.map(({ disposition, contentId, ...file }): EmailAttachment =>
-				disposition === "inline" && contentId ? { ...file, disposition, contentId } : { ...file, disposition: "attachment" }),
+			...(attachments?.length ? {
+				attachments: attachments.map(({ disposition, contentId, ...file }): EmailAttachment =>
+					disposition === "inline" && contentId ? { ...file, disposition, contentId } : { ...file, disposition: "attachment" }),
+			} : {}),
 		})),
 		CLOUDFLARE_MAIL: bindings.CLOUDFLARE_TOKEN && bindings.CLOUDFLARE_WORKER_NAME ?
 			cloudflareMail(bindings.CLOUDFLARE_TOKEN, bindings.CLOUDFLARE_WORKER_NAME, bindings.CLOUDFLARE_ACCOUNT_ID) : undefined,
@@ -109,7 +111,7 @@ export default {
 	async email(message: ForwardableEmailMessage, bindings: Bindings, ctx: ExecutionContext) {
 		const marker = bindings.CLOUDFLARE_WORKER_NAME ?? "agentic-inbox";
 		await receiveEmail({
-			to: message.to, raw: message.raw, rawSize: message.rawSize,
+			from: message.from, to: message.to, raw: message.raw, rawSize: message.rawSize,
 			setReject: (reason) => message.setReject(reason),
 			forwardedAlready: message.headers.get("X-Agentic-Inbox-Forwarded-By") === marker,
 			forward: (destination) => message.forward(destination, new Headers({ "X-Agentic-Inbox-Forwarded-By": marker })),

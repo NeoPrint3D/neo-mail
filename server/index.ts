@@ -425,7 +425,7 @@ async function streamToArrayBuffer(stream: ReadableStream, streamSize: number) {
 	return result;
 }
 
-async function receiveEmail(event: { to: string; raw: ReadableStream<Uint8Array>; rawSize: number; setReject: (message: string) => void; forwardedAlready?: boolean; forward?: (address: string) => Promise<unknown> }, env: Env) {
+async function receiveEmail(event: { from?: string; to: string; raw: ReadableStream<Uint8Array>; rawSize: number; setReject: (message: string) => void; forwardedAlready?: boolean; forward?: (address: string) => Promise<unknown> }, env: Env) {
 	// The SMTP envelope is authoritative. To/Cc are display headers and may omit the mailbox (Bcc).
 	const plan = await resolveInboundRecipient(env, event.to);
 	if (!plan.accept) {
@@ -443,17 +443,28 @@ async function receiveEmail(event: { to: string; raw: ReadableStream<Uint8Array>
 		if (!delivered && errors.length) throw new AggregateError(errors, "Could not forward incoming mail");
 		if (errors.length) console.error(`Forwarding partially failed (${delivered}/${addresses.length} accepted)`, errors);
 	}
+	const canonicalMailbox = (address: string) => {
+		const [local, domain] = normalizeAddress(address).split("@");
+		return local && domain ? `${local.split("+")[0]}@${domain}` : "";
+	};
+	const sameSenderAddress = (sender: string | undefined, target: string) => {
+		const senderAddr = sender ? canonicalMailbox(sender) : "";
+		return !!senderAddr && senderAddr === canonicalMailbox(target);
+	};
 	let targets = plan.forwardTo;
 	if (event.forward && targets.length) {
 		const localDomains = new Set(await env.DOMAINS.names());
 		targets = event.forwardedAlready ? [] : targets.filter((target) => !localDomains.has(addressDomain(target)));
 		if (!plan.deliverTo) {
-			if (!targets.length) event.setReject("No external destination available for forwarding");
-			else {
+			if (!targets.length) {
+				event.setReject("No external destination available for forwarding");
+				return;
+			}
+			if (!env.SEND_EMAIL || !targets.some((target) => sameSenderAddress(event.from, target))) {
 				await forwardAll(event.forward, targets);
 				notifyWebhooks(env, plan.recipient);
+				return;
 			}
-			return;
 		}
 	}
 	const rawEmail = await streamToArrayBuffer(event.raw, event.rawSize);
@@ -519,8 +530,25 @@ async function receiveEmail(event: { to: string; raw: ReadableStream<Uint8Array>
 
 	if (targets.length > 0) {
 		try {
-			if (event.forward) await forwardAll(event.forward, targets);
-			else await forwardInboundEmail(env, plan.recipient, targets, parsedEmail);
+			if (event.forward) {
+				// Re-send via Email Sending when forwarding back to the sender's own address/domain so providers like Gmail do not deduplicate the original Message-ID against Sent.
+				const headerFrom = parsedEmail.from?.address;
+				const resendTargets = env.SEND_EMAIL
+					? targets.filter((target) => sameSenderAddress(event.from, target) || sameSenderAddress(headerFrom, target))
+					: [];
+				const nativeTargets = targets.filter((target) => !resendTargets.includes(target));
+				if (resendTargets.length > 0) {
+					try {
+						await forwardInboundEmail(env, plan.recipient, resendTargets, parsedEmail);
+					} catch (error) {
+						console.error(`Email Sending forwarding failed for ${plan.recipient}, falling back to native forward:`, error);
+						nativeTargets.push(...resendTargets);
+					}
+				}
+				if (nativeTargets.length > 0) await forwardAll(event.forward, nativeTargets);
+			} else {
+				await forwardInboundEmail(env, plan.recipient, targets, parsedEmail);
+			}
 			if (!storedLocally) notifyWebhooks(env, plan.recipient);
 		} catch (error) {
 			if (!plan.deliverTo) {

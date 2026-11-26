@@ -63,7 +63,7 @@ The Worker serves the app and MCP endpoint, receives mail through **Cloudflare E
 
 ## Install on iPhone or iPad
 
-Open the workspace in Safari and choose **Share → Add to Home Screen**. Leave **Open as Web App** turned on if shown. The phone layout puts search at the top, folders in the navigation drawer, mailbox switching behind the avatar, and Compose in the inbox header. Pull down from the top of a message list to refresh. Back from a message restores the inbox you were reading. Mail needs a connection: only public app assets and the offline screen are cached, not messages or authenticated pages.
+Open the workspace in Safari and choose **Share → Add to Home Screen**. Leave **Open as Web App** turned on if shown. The phone layout puts search at the top, folders in the navigation drawer, mailbox switching behind the avatar, and Compose in the inbox header. Pull down from the top of a message list to refresh, swipe left on a message to move it to Trash, or swipe right to mark it read/unread (or recover it from Trash). Back from a message restores the inbox you were reading. Mail needs a connection: only public app assets and the offline screen are cached, not messages or authenticated pages.
 
 ## Appearance
 

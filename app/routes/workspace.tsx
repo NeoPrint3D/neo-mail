@@ -1,6 +1,6 @@
 import { Loader, useKumoToastManager } from "@cloudflare/kumo";
 import Button from "~/components/Button";
-import { ArchiveIcon, ArrowsClockwiseIcon, EnvelopeOpenIcon, FunnelSimpleIcon, GlobeHemisphereWestIcon, PaperclipIcon, StarIcon, TrashIcon, TrayIcon } from "@phosphor-icons/react";
+import { ArchiveIcon, ArrowsClockwiseIcon, ArrowUUpLeftIcon, EnvelopeOpenIcon, EnvelopeSimpleIcon, FunnelSimpleIcon, GlobeHemisphereWestIcon, PaperclipIcon, StarIcon, TrashIcon, TrayIcon } from "@phosphor-icons/react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
@@ -8,6 +8,7 @@ import { formatListDate } from "shared/dates";
 import { Folders } from "shared/folders";
 import AppDialog, { DeleteDialog } from "~/components/AppDialog";
 import MessageAvatar from "~/components/MessageAvatar";
+import SwipeableMailRow from "~/components/SwipeableMailRow";
 import { usePullToRefresh } from "~/hooks/usePullToRefresh";
 import MailboxSelect from "~/components/MailboxSelect";
 import TrashActions from "~/components/TrashActions";
@@ -142,7 +143,20 @@ function WorkspaceMail({ domain, mailboxId, view, q, hasMailboxes, heading, inbo
 					const unread = !email.read && !isOutgoing;
 					const sender = isOutgoing ? `To: ${email.recipient || "No recipient"}` : email.sender || "Unknown sender";
 					const snippet = getSnippetText(email.snippet, 180);
-					return <li key={key} className={`mail-message-row phone-list-row ${unread ? "unread" : ""} ${selected.has(key) ? "selected" : ""}`}>
+					return <SwipeableMailRow
+						key={key}
+						disabled={busy}
+						className={`mail-message-row phone-list-row ${unread ? "unread" : ""} ${selected.has(key) ? "selected" : ""}`}
+						leftAction={inTrash
+							? { label: "Recover", icon: <ArrowUUpLeftIcon size={18} />, tone: "accent", onTrigger: () => recover([email]) }
+							: !isOutgoing
+								? { label: unread ? "Read" : "Unread", icon: unread ? <EnvelopeOpenIcon size={18} /> : <EnvelopeSimpleIcon size={18} />, tone: "accent", onTrigger: () => void updateRows([email], (row) => api.updateEmail(row.mailboxId, row.id, { read: unread }), unread ? "Marked read" : "Marked unread", false) }
+								: email.folder_id !== Folders.ARCHIVE
+									? { label: "Archive", icon: <ArchiveIcon size={18} />, tone: "accent", onTrigger: () => void updateRows([email], (row) => api.moveEmail(row.mailboxId, row.id, Folders.ARCHIVE), "Archived", false) }
+									: undefined}
+						rightAction={inTrash
+							? { label: "Delete", icon: <TrashIcon size={18} />, tone: "danger", onTrigger: () => setPendingDelete([email]) }
+							: { label: "Trash", icon: <TrashIcon size={18} />, tone: "danger", onTrigger: () => void updateRows([email], (row) => api.moveEmail(row.mailboxId, row.id, Folders.TRASH), "Moved to Trash", false) }}>
 						<MessageAvatar sender={sender} label={`Select ${subject}`} checked={selected.has(key)} disabled={busy} onToggle={() => toggle(key, !selected.has(key))} />
 						<input type="checkbox" className="workspace-check" checked={selected.has(key)} disabled={busy} aria-label={`Select ${subject} in ${email.mailboxId}`}
 							onChange={(event) => toggle(key, event.target.checked)} />
@@ -161,7 +175,7 @@ function WorkspaceMail({ domain, mailboxId, view, q, hasMailboxes, heading, inbo
 							</div>
 						</Link>
 						{inTrash && <TrashActions compact disabled={busy} onRecover={() => recover([email])} onDelete={() => setPendingDelete([email])} />}
-					</li>;
+					</SwipeableMailRow>;
 				})}
 			</ul>}
 		{emails.length > 0 && (mail.hasNextPage || mail.isError) && <div className="border-t border-kumo-line p-3 text-center">

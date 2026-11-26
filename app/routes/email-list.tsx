@@ -9,6 +9,7 @@ import { DeleteDialog } from "~/components/AppDialog";
 import {
 	ArchiveIcon,
 	ArrowBendUpLeftIcon,
+	ArrowUUpLeftIcon,
 	ArrowsClockwiseIcon,
 	EnvelopeOpenIcon,
 	EnvelopeSimpleIcon,
@@ -29,6 +30,7 @@ import MailboxSplitView from "~/components/MailboxSplitView";
 import TrashActions from "~/components/TrashActions";
 import { PhoneComposeButton } from "~/components/WorkspaceFrame";
 import MessageAvatar from "~/components/MessageAvatar";
+import SwipeableMailRow from "~/components/SwipeableMailRow";
 import { usePullToRefresh } from "~/hooks/usePullToRefresh";
 import { useUIStore } from "~/hooks/useUIStore";
 import { getSnippetText } from "~/lib/utils";
@@ -429,9 +431,62 @@ export default function EmailListRoute() {
 							const unread = hasUnread(email);
 							const snippet = getSnippetText(email.snippet);
 							return (
-								<div
+								<SwipeableMailRow
+									as="div"
 									key={email.id}
+									disabled={bulkBusy}
 									className={`mail-message-row phone-folder-row phone-list-row group ${unread ? "unread" : ""} ${isSelected || isChecked ? "selected" : ""}`}
+									leftAction={inTrash
+										? { label: "Recover", icon: <ArrowUUpLeftIcon size={18} />, tone: "accent", onTrigger: () => recover([email]) }
+										: showUnread
+											? {
+												label: unread ? "Read" : "Unread",
+												icon: unread ? <EnvelopeOpenIcon size={18} /> : <EnvelopeSimpleIcon size={18} />,
+												tone: "accent",
+												onTrigger: () => {
+													if (!mailboxId) return;
+													const onError = (err: unknown) => toast.add({ title: err instanceof Error ? err.message : "Could not update message", variant: "error" });
+													if (unread && email.thread_id && email.thread_count && email.thread_count > 1) {
+														markThreadRead.mutate({ mailboxId, threadId: email.thread_id }, { onSuccess: () => toast.add({ title: "Marked read" }), onError });
+													} else {
+														updateEmail.mutate({ mailboxId, id: email.id, data: { read: unread } }, { onSuccess: () => toast.add({ title: unread ? "Marked read" : "Marked unread" }), onError });
+													}
+												},
+											}
+											: folder !== Folders.ARCHIVE
+												? {
+													label: "Archive",
+													icon: <ArchiveIcon size={18} />,
+													tone: "accent",
+													onTrigger: () => {
+														if (!mailboxId) return;
+														moveEmail.mutate({ mailboxId, id: email.id, folderId: Folders.ARCHIVE }, {
+															onSuccess: () => {
+																if (selectedEmailId === email.id) closePanel();
+																toast.add({ title: "Archived" });
+															},
+															onError: (err) => toast.add({ title: err instanceof Error ? err.message : "Could not archive", variant: "error" }),
+														});
+													},
+												}
+												: undefined}
+									rightAction={inTrash
+										? { label: "Delete", icon: <TrashIcon size={18} />, tone: "danger", onTrigger: () => setPendingDelete([email]) }
+										: {
+											label: "Trash",
+											icon: <TrashIcon size={18} />,
+											tone: "danger",
+											onTrigger: () => {
+												if (!mailboxId) return;
+												moveEmail.mutate({ mailboxId, id: email.id, folderId: Folders.TRASH }, {
+													onSuccess: () => {
+														if (selectedEmailId === email.id) closePanel();
+														toast.add({ title: "Moved to Trash" });
+													},
+													onError: (err) => toast.add({ title: err instanceof Error ? err.message : "Could not move to Trash", variant: "error" }),
+												});
+											},
+										}}
 								>
 									<MessageAvatar sender={email.sender} label={`Select ${email.subject || "(No subject)"}`} checked={isChecked} disabled={bulkBusy} onToggle={() => toggleSelection(email.id, !isChecked)} />
 									<input
@@ -518,7 +573,7 @@ export default function EmailListRoute() {
 											/>
 										</Tooltip>
 									</div>}
-								</div>
+								</SwipeableMailRow>
 							);
 						})}
 					</div>
