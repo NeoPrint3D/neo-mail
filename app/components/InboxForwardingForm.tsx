@@ -56,6 +56,7 @@ function Editor({ mailbox, initialTargets, busy, setBusy, cloudflare, onClose }:
 			const key = queryKeys.mailboxes.detail(mailbox.id);
 			cache.setQueryData<Mailbox>(key, (current) => current && ({ ...current, settings: { ...current.settings, forwarding } }));
 			void cache.invalidateQueries({ queryKey: key });
+			void cache.invalidateQueries({ queryKey: ["routing"] });
 			toast.add({ title: enabled ? "Inbox forwarding saved" : "Inbox forwarding turned off" });
 			onClose();
 		} catch (err) {

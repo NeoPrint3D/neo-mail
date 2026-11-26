@@ -4,6 +4,7 @@ import { z } from "zod";
 import { hostName } from "./domains";
 import { receiveEmail } from "./index";
 import { addressDomain, normalizeAddress } from "./lib/domains";
+import { listMailboxes } from "./lib/email-helpers";
 import { RoutingInputSchema, syncCloudflareEmailRouting } from "./routing";
 import type { Env } from "./types";
 
@@ -19,8 +20,29 @@ routingRoutes.onError((error, c) => {
 routingRoutes.get("/api/v1/routing", async (c) => {
 	const domainParam = c.req.query("domain");
 	const domain = domainParam ? hostName.parse(domainParam) : undefined;
+	const [rules, allMailboxes] = await Promise.all([
+		c.env.ROUTING.list(domain),
+		listMailboxes(c.env.STORE),
+	]);
+	const mailboxes = domain ? allMailboxes.filter((box) => box.domain === domain) : allMailboxes;
+	const inboxForwarding = (await Promise.all(mailboxes.map(async (box) => {
+		const obj = await c.env.STORE.get(`mailboxes/${box.id}.json`);
+		if (!obj) return null;
+		const { forwarding } = await obj.json<{ forwarding?: { enabled?: boolean; targets?: string[]; keepCopy?: boolean; email?: string } }>();
+		if (!forwarding) return null;
+		const forwardTo = [...new Set([...(forwarding.targets ?? []), ...(forwarding.email ? [forwarding.email] : [])].map(normalizeAddress).filter(Boolean))];
+		if (!forwardTo.length && !forwarding.enabled) return null;
+		return {
+			mailboxId: box.id,
+			domain: box.domain,
+			enabled: !!forwarding.enabled,
+			forwardTo,
+			keepCopy: forwarding.keepCopy ?? true,
+		};
+	}))).filter((item): item is NonNullable<typeof item> => item !== null);
 	return c.json({
-		rules: await c.env.ROUTING.list(domain),
+		rules,
+		inboxForwarding,
 		platform: c.env.platform,
 		forwardingVerification: !!c.env.CLOUDFLARE_MAIL,
 		smtpInboundPort: c.env.SMTP_INBOUND_PORT,

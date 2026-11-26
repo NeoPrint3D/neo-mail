@@ -210,6 +210,7 @@ test("standalone login, DNS setup, two-domain real SMTP and MCP", { timeout: 90_
 
 	// Direct mailbox forwarding (keepCopy: false) forwards without keeping a local copy.
 	await json(pathFor(a), { method: "PUT", body: JSON.stringify({ settings: { fromName: "Team", forwarding: { enabled: true, targets: ["direct@outside.test", "extra@outside.test"], keepCopy: false } } }) });
+	assert.deepEqual((await json(`/api/v1/routing?domain=${domainA}`)).inboxForwarding, [{ mailboxId: a, domain: domainA, enabled: true, forwardTo: ["direct@outside.test", "extra@outside.test"], keepCopy: false }]);
 	const inboxCountBeforeFwd = (await json(`${pathFor(a)}/emails?folder=inbox`)).totalCount;
 	const beforeDirect = relayed.length;
 	assert.equal((await deliver(a, "Message-ID: <dir-1@outside.test>\r\nSubject: Direct forward only\r\n\r\nForwarded")).accepted.length, 1);
@@ -217,6 +218,7 @@ test("standalone login, DNS setup, two-domain real SMTP and MCP", { timeout: 90_
 	assert.deepEqual(relayed[beforeDirect].to, ["direct@outside.test", "extra@outside.test"]);
 	assert.equal((await json(`${pathFor(a)}/emails?folder=inbox`)).totalCount, inboxCountBeforeFwd);
 	await json(pathFor(a), { method: "PUT", body: JSON.stringify({ settings: { fromName: "Team", forwarding: { enabled: false, targets: [], keepCopy: true } } }) });
+	assert.deepEqual((await json(`/api/v1/routing?domain=${domainA}`)).inboxForwarding, []);
 
 	// HMAC-signed /api/inbound relay webhook delivers through the same routing engine.
 	const inboundRaw = Buffer.from("From: relay@sender.example\r\nMessage-ID: <hook-1@sender.example>\r\nSubject: Webhook relay\r\n\r\nVia relay");

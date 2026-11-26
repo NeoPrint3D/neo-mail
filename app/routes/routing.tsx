@@ -13,7 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router";
-import type { CloudflareRoutingSyncResult, RoutingAction, RoutingMatchType, RoutingRule, RoutingRuleInput } from "shared/routing";
+import type { CloudflareRoutingSyncResult, InboxForwardingRule, RoutingAction, RoutingMatchType, RoutingRule, RoutingRuleInput } from "shared/routing";
 import InboxForwardingForm from "~/components/InboxForwardingForm";
 import { ForwardingDestinations } from "~/components/ForwardingDestinations";
 import MailWebhooks from "~/components/MailWebhooks";
@@ -40,6 +40,7 @@ function RuleDialog({
 	domains,
 	mailboxes,
 	initial,
+	initialInbox,
 	defaultDomain,
 	cloudflare,
 	onClose,
@@ -48,14 +49,15 @@ function RuleDialog({
 	domains: string[];
 	mailboxes: Mailbox[];
 	initial: RoutingRule | null;
+	initialInbox: string | null;
 	defaultDomain: string;
 	cloudflare: boolean;
 	onClose: () => void;
 	onSave: (input: RoutingRuleInput) => Promise<void>;
 }) {
 	const [domain, setDomain] = useState(initial?.domain || defaultDomain || domains[0] || "");
-	const [source, setSource] = useState<RuleSource>(initial?.matchType || "exact");
-	const [mailboxId, setMailboxId] = useState("");
+	const [source, setSource] = useState<RuleSource>(initialInbox ? "mailbox" : initial?.matchType || "exact");
+	const [mailboxId, setMailboxId] = useState(initialInbox || "");
 	const [localPart, setLocalPart] = useState(initial ? splitLocalPart(initial) : "");
 	const [action, setAction] = useState<RoutingAction>(initial?.action || "forward");
 	const [destinations, setDestinations] = useState(initial?.forwardTo ?? []);
@@ -77,6 +79,7 @@ function RuleDialog({
 		setError("");
 		const targets = forwardingAddresses(destinations);
 		if (action === "forward" && !targets.length) { setError("Add at least one forwarding destination."); return; }
+		if (action === "forward" && alsoLocalCopy && !deliverTo) { setError("Select a local mailbox to keep a copy in."); return; }
 		const resolvedDeliverTo = action === "mailbox"
 			? (deliverTo || null)
 			: action === "forward" && alsoLocalCopy
@@ -107,12 +110,12 @@ function RuleDialog({
 		<Dialog.Root open onOpenChange={(open) => { if (!open && !busy) onClose(); }}>
 			<Dialog size="lg" className="settings-dialog max-h-[88dvh] overflow-y-auto p-6">
 				<Dialog.Title className="text-xl font-semibold">
-					{initial ? `Edit route · ${initial.address}` : isInbox ? "Inbox forwarding" : "Add routing rule"}
+					{initial ? `Edit route · ${initial.address}` : initialInbox ? `Edit forwarding · ${initialInbox}` : isInbox ? "Inbox forwarding" : "Add routing rule"}
 				</Dialog.Title>
 				<Dialog.Description className="mt-1 mb-5 text-sm text-kumo-subtle">
-					Forward mail from an existing inbox, or set up a rule for an alias or catch-all.
+					{initialInbox ? "Update forwarding destinations and whether a copy is kept in this Inbox." : "Forward mail from an existing inbox, or set up a rule for an alias or catch-all."}
 				</Dialog.Description>
-				<div className="mb-4 space-y-4">
+				{!initialInbox && <div className="mb-4 space-y-4">
 					<div className="grid gap-3 sm:grid-cols-2">
 						<SearchSelect showLabel label="Match rule" value={source} disabled={busy} onChange={(value) => setSource(value as RuleSource)}
 							options={[{ value: "exact", label: "Specific address" }, ...(!initial && mailboxes.length ? [{ value: "mailbox", label: "Existing inbox" }] : []), { value: "catch_all", label: `Catch-all (*@${domain || "domain"})` }]} />
@@ -150,7 +153,7 @@ function RuleDialog({
 							</div>
 						</label>
 					)}
-				</div>
+				</div>}
 
 				{isInbox ? <InboxForwardingForm mailboxId={matchingMailbox?.id ?? mailboxId} initialTargets={destinations}
 					busy={busy} setBusy={setBusy} cloudflare={cloudflare} onClose={onClose} /> : (
@@ -227,7 +230,7 @@ function RuleDialog({
 						<button
 							type="submit"
 							className="mail-button primary"
-							disabled={busy || !!matchingMailbox || (action === "mailbox" && !deliverTo)}
+							disabled={busy || !!matchingMailbox || ((action === "mailbox" || (action === "forward" && alsoLocalCopy)) && !deliverTo)}
 						>
 							{busy ? "Saving…" : initial ? "Save rule" : "Create rule"}
 						</button>
@@ -255,12 +258,15 @@ export default function RoutingRoute() {
 
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editing, setEditing] = useState<RoutingRule | null>(null);
+	const [editingInbox, setEditingInbox] = useState<string | null>(null);
 	const [deleting, setDeleting] = useState<RoutingRule | null>(null);
+	const [deletingInbox, setDeletingInbox] = useState<InboxForwardingRule | null>(null);
 	const [syncDomain, setSyncDomain] = useState<string | null>(null);
 	const [syncResults, setSyncResults] = useState<CloudflareRoutingSyncResult[] | null>(null);
 
 	const domains = config?.domains ?? [];
 	const rules = routing.data?.rules ?? [];
+	const inboxForwarding = routing.data?.inboxForwarding ?? [];
 
 	const refresh = async () => {
 		await Promise.all([
@@ -311,6 +317,33 @@ export default function RoutingRoute() {
 		onError: (err) => toast.add({ title: err instanceof Error ? err.message : "Could not delete rule", variant: "error" }),
 	});
 
+	const toggleInboxForwarding = useMutation({
+		mutationFn: (fwd: InboxForwardingRule) =>
+			api.updateMailboxForwarding(fwd.mailboxId, { enabled: !fwd.enabled, targets: fwd.forwardTo, keepCopy: fwd.keepCopy }),
+		onSuccess: async (_data, fwd) => {
+			await Promise.all([
+				refresh(),
+				cache.invalidateQueries({ queryKey: queryKeys.mailboxes.detail(fwd.mailboxId) }),
+			]);
+			toast.add({ title: !fwd.enabled ? `Enabled forwarding for ${fwd.mailboxId}` : `Paused forwarding for ${fwd.mailboxId}` });
+		},
+		onError: (err) => toast.add({ title: err instanceof Error ? err.message : "Could not update forwarding", variant: "error" }),
+	});
+
+	const removeInboxForwarding = useMutation({
+		mutationFn: (mailboxId: string) =>
+			api.updateMailboxForwarding(mailboxId, { enabled: false, targets: [], keepCopy: true }),
+		onSuccess: async (_data, mailboxId) => {
+			await Promise.all([
+				refresh(),
+				cache.invalidateQueries({ queryKey: queryKeys.mailboxes.detail(mailboxId) }),
+			]);
+			toast.add({ title: `Forwarding removed for ${mailboxId}` });
+			setDeletingInbox(null);
+		},
+		onError: (err) => toast.add({ title: err instanceof Error ? err.message : "Could not remove forwarding", variant: "error" }),
+	});
+
 	const syncCloudflare = useMutation({
 		mutationFn: (domain: string) => api.syncCloudflareRouting(domain),
 		onSuccess: (results) => {
@@ -355,6 +388,7 @@ export default function RoutingRoute() {
 							disabled={!domains.length || mailboxQuery.isPending}
 							onClick={() => {
 								setEditing(null);
+								setEditingInbox(null);
 								setDialogOpen(true);
 							}}
 						>
@@ -425,17 +459,69 @@ export default function RoutingRoute() {
 							Connect a domain in <Link to="/domains" className="text-kumo-link">Domains & DNS</Link> before creating alias rules.
 						</p>
 					</section>
-				) : !rules.length ? (
+				) : !rules.length && !inboxForwarding.length ? (
 					<section className="settings-card py-12 text-center">
 						<ShareNetworkIcon size={32} className="mx-auto mb-3 text-kumo-subtle" />
-						<h2 className="font-semibold">No alias or catch-all rules yet</h2>
+						<h2 className="font-semibold">No routing or forwarding rules yet</h2>
 						<p className="mt-1 text-sm text-kumo-subtle">
-							Create an alias like <code>sales@{domains[0]}</code> or a catch-all to forward mail directly to addresses you specify.
+							Forward an existing inbox, or create an alias like <code>sales@{domains[0]}</code> or a catch-all.
 						</p>
 					</section>
 				) : (
 					<section className="settings-card overflow-hidden p-0">
 						<ul className="divide-y divide-kumo-line">
+							{inboxForwarding.map((fwd) => (
+								<li key={`inbox:${fwd.mailboxId}`} className="routing-rule-row flex flex-wrap items-center gap-3 px-4 py-3.5 md:px-5">
+									<div className="min-w-0 flex-1 space-y-1">
+										<div className="flex flex-wrap items-center gap-2">
+											<code className="break-all text-sm font-semibold">{fwd.mailboxId}</code>
+											<Badge variant="secondary">Inbox forwarding</Badge>
+											{!fwd.enabled && <Badge variant="outline">Paused</Badge>}
+										</div>
+										<div className="flex flex-wrap items-center gap-2 text-xs text-kumo-subtle">
+											{fwd.forwardTo.length > 0 && (
+												<span className="inline-flex items-center gap-1 text-kumo-strong">
+													<ArrowRightIcon size={13} /> Forwards to {fwd.forwardTo.join(", ")}
+												</span>
+											)}
+											<span className="inline-flex items-center gap-1 text-kumo-strong">
+												<EnvelopeSimpleIcon size={13} />
+												{fwd.keepCopy ? `Copy in ${fwd.mailboxId}` : "Forward only (no local copy)"}
+											</span>
+										</div>
+									</div>
+									<div className="routing-rule-actions flex items-center gap-1.5">
+										<Button
+											variant="ghost"
+											size="sm"
+											disabled={toggleInboxForwarding.isPending || !fwd.forwardTo.length}
+											onClick={() => toggleInboxForwarding.mutate(fwd)}
+										>
+											{fwd.enabled ? "Pause" : "Enable"}
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											shape="square"
+											aria-label={`Edit forwarding for ${fwd.mailboxId}`}
+											icon={<PencilSimpleIcon size={15} />}
+											onClick={() => {
+												setEditing(null);
+												setEditingInbox(fwd.mailboxId);
+												setDialogOpen(true);
+											}}
+										/>
+										<Button
+											variant="ghost"
+											size="sm"
+											shape="square"
+											aria-label={`Remove forwarding for ${fwd.mailboxId}`}
+											icon={<TrashIcon size={15} />}
+											onClick={() => setDeletingInbox(fwd)}
+										/>
+									</div>
+								</li>
+							))}
 							{rules.map((rule) => (
 								<li key={rule.id} className="routing-rule-row flex flex-wrap items-center gap-3 px-4 py-3.5 md:px-5">
 									<div className="min-w-0 flex-1 space-y-1">
@@ -511,17 +597,40 @@ export default function RoutingRoute() {
 					domains={domains}
 					mailboxes={mailboxes}
 					initial={editing}
+					initialInbox={editingInbox}
 					defaultDomain={selectedDomain}
 					cloudflare={cloudflare}
 					onClose={() => {
 						setDialogOpen(false);
 						setEditing(null);
+						setEditingInbox(null);
 					}}
 					onSave={async (input) => {
 						await saveRule.mutateAsync(input);
 					}}
 				/>
 			)}
+
+			<Dialog.Root open={!!deletingInbox} onOpenChange={(open) => { if (!open && !removeInboxForwarding.isPending) setDeletingInbox(null); }}>
+				<Dialog size="sm" className="settings-dialog space-y-4 p-6">
+					<Dialog.Title className="font-semibold">Remove forwarding for {deletingInbox?.mailboxId}?</Dialog.Title>
+					<Dialog.Description className="text-sm text-kumo-subtle">
+						Incoming mail will still be delivered to this inbox, but it will stop forwarding to external addresses.
+					</Dialog.Description>
+					<div className="flex justify-end gap-2">
+						<Button variant="secondary" disabled={removeInboxForwarding.isPending} onClick={() => setDeletingInbox(null)}>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							loading={removeInboxForwarding.isPending}
+							onClick={() => { if (deletingInbox) removeInboxForwarding.mutate(deletingInbox.mailboxId); }}
+						>
+							Remove
+						</Button>
+					</div>
+				</Dialog>
+			</Dialog.Root>
 
 			<Dialog.Root open={!!deleting} onOpenChange={(open) => { if (!open && !removeRule.isPending) setDeleting(null); }}>
 				<Dialog size="sm" className="settings-dialog space-y-4 p-6">

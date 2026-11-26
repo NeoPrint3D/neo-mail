@@ -10,7 +10,7 @@ import type { OutgoingAttachment } from "shared/attachments";
 import type { PushDevice, PushSettings } from "shared/push";
 import type { MailWebhook } from "shared/webhooks";
 import type { DomainConfig, DomainResult, DnsCheck, DnsRecord } from "shared/dns";
-import type { CloudflareRoutingSyncResult, RoutingRule, RoutingRuleInput } from "shared/routing";
+import type { CloudflareRoutingSyncResult, InboxForwardingRule, RoutingRule, RoutingRuleInput } from "shared/routing";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -131,6 +131,7 @@ const api = {
 	verifyForwardingDestination: (domain: string, email: string) => post<ForwardingDestination>(`/api/v1/domains/${encodeURIComponent(domain)}/cloudflare/destinations`, { email }),
 	listRouting: (domain?: string) => get<{
 		rules: RoutingRule[];
+		inboxForwarding: InboxForwardingRule[];
 		platform?: "cloudflare";
 		forwardingVerification: boolean;
 		smtpInboundPort: number;

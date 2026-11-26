@@ -55,6 +55,7 @@ export function useUpdateMailbox() {
 			qc.setQueryData(queryKeys.mailboxes.detail(mailboxId), mailbox);
 			void qc.invalidateQueries({ queryKey: queryKeys.mailboxes.all });
 			void qc.invalidateQueries({ queryKey: ["workspace-mail"] });
+			void qc.invalidateQueries({ queryKey: ["routing"] });
 		},
 	});
 }

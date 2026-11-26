@@ -28,6 +28,14 @@ export interface RoutingRuleInput {
 	note?: string;
 }
 
+export interface InboxForwardingRule {
+	mailboxId: string;
+	domain: string;
+	enabled: boolean;
+	forwardTo: string[];
+	keepCopy: boolean;
+}
+
 export interface CloudflareRoutingSyncResult {
 	ruleId: string;
 	address: string;

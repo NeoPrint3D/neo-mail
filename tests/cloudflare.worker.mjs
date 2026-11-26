@@ -90,6 +90,7 @@ test("Cloudflare Worker: first-run auth, multi-domain mail, forwarding, R2, and 
 	assert.equal(folder.name, "Projects");
 	const alias = "help@first.test";
 	await json("/api/v1/routing", 201, { domain: "first.test", matchType: "exact", localPart: "help", action: "mailbox", deliverTo: a, forwardTo: ["external@example.net"] });
+	await json("/api/v1/routing", 201, { domain: "first.test", matchType: "exact", localPart: "billing", action: "forward", deliverTo: a, forwardTo: ["billing-fwd@example.net"] });
 	await json("/api/v1/routing", 201, { domain: "second.test", matchType: "catch_all", action: "forward", forwardTo: ["one@example.net", "two@example.net"] });
 	const inbound = (to, subject, headers = "", content = "Plain body", format = "text") => {
 		const from = "customer@example.net";
@@ -99,6 +100,10 @@ test("Cloudflare Worker: first-run auth, multi-domain mail, forwarding, R2, and 
 		});
 	};
 	const rawMultipart = [`--fixture`, "Content-Type: text/plain", "", "Example body", "--fixture", "Content-Type: text/plain", 'Content-Disposition: attachment; filename="note.txt"', "Content-Transfer-Encoding: base64", "", "SGVsbG8gYXR0YWNobWVudA==", "--fixture--"].join("\r\n");
+	const billingInbound = await inbound("billing@first.test", "Billing forward + copy", "", "Keep and forward", "json");
+	assert.ok(billingInbound.ok);
+	assert.deepEqual((await billingInbound.json()).forwards.map(({ recipient }) => recipient), ["billing-fwd@example.net"]);
+	assert.ok((await json(`${mb(a)}/emails?folder=inbox`)).emails.some(({ subject }) => subject === "Billing forward + copy"));
 	const withAttachment = await inbound(alias, "Alias delivery", 'MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary="fixture"\r\n', rawMultipart);
 	assert.ok(withAttachment.ok, `${await withAttachment.text()}\n${log}`);
 	assert.ok((await inbound(b, "Second domain")).ok);
@@ -108,7 +113,7 @@ test("Cloudflare Worker: first-run auth, multi-domain mail, forwarding, R2, and 
 	assert.match(await rejected.text(), /Mailbox unavailable/i);
 	const workspace = await json("/api/v1/workspace/emails");
 	assert.equal(workspace.mailboxCount, 2);
-	assert.equal(workspace.emails.length, 2);
+	assert.equal(workspace.emails.length, 3);
 	const [message] = (await json(`${mb(a)}/emails?folder=inbox`)).emails;
 	assert.equal(message.subject, "Alias delivery");
 	const full = await json(`${mb(a)}/emails/${message.id}`);
@@ -131,6 +136,7 @@ test("Cloudflare Worker: first-run auth, multi-domain mail, forwarding, R2, and 
 	await json(forwardPath, 400, { enabled: true, targets: [a] }, "PUT");
 	const saved = await json(forwardPath, 200, { enabled: true, targets }, "PUT");
 	assert.deepEqual(saved, { enabled: true, targets, keepCopy: true });
+	assert.deepEqual((await json("/api/v1/routing?domain=second.test")).inboxForwarding, [{ mailboxId: b, domain: "second.test", enabled: true, forwardTo: targets, keepCopy: true }]);
 	assert.equal((await json(mb(b))).settings.fromName, "Jobs");
 	assert.deepEqual((await json(mb(b))).settings.forwarding, saved);
 	const forwarded = await inbound(b, "Store and forward existing inbox mail", "", "Keep this message", "json");
@@ -140,6 +146,9 @@ test("Cloudflare Worker: first-run auth, multi-domain mail, forwarding, R2, and 
 	assert.equal(jobsInbox.length, 2);
 	assert.ok(jobsInbox.some(({ subject }) => subject === "Store and forward existing inbox mail"));
 	await json(forwardPath, 200, { ...saved, enabled: false }, "PUT");
+	assert.equal((await json("/api/v1/routing?domain=second.test")).inboxForwarding[0].enabled, false);
+	await json(forwardPath, 200, { enabled: false, targets: [], keepCopy: true }, "PUT");
+	assert.deepEqual((await json("/api/v1/routing?domain=second.test")).inboxForwarding, []);
 
 	// Outbound webhooks: list eligible sources, validate destination, toggle, and delete.
 	const hooksBefore = await json("/api/v1/webhooks");
@@ -204,7 +213,7 @@ test("Cloudflare Worker: first-run auth, multi-domain mail, forwarding, R2, and 
 	assert.ok(!adminTools.some((name) => /password|create.*token|revoke.*token/.test(name)));
 	assert.deepEqual((await call(reader, "list_mailboxes", {})).map((box) => box.id), [a]);
 	assert.deepEqual((await call(reader, "list_domains", {})).map((row) => row.domain), ["first.test"]);
-	assert.deepEqual((await call(reader, "search_workspace", {})).emails.map((row) => row.mailboxId), [a]);
+	assert.deepEqual((await call(reader, "search_workspace", {})).emails.map((row) => row.mailboxId), [a, a]);
 	const file = await call(reader, "get_attachment", { mailboxId: a, emailId: message.id, attachmentId: full.attachments[0].id });
 	assert.equal(Buffer.from(file.content, "base64").toString(), "Hello attachment");
 	await call(reader, "get_email", { mailboxId: b, emailId: message.id }, true);
