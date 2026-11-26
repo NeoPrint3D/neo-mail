@@ -76,18 +76,38 @@ export default function EmailIframe({ body, autoSize }: EmailIframeProps) {
 		const quoteColor = dark ? "#9cacc0" : "#6b7280";
 		const preBg = dark ? "#212936" : "#f3f4f6";
 
-		const heightScript = autoSize
-			? `<script>
-				function reportHeight() {
-					var h = document.body.scrollHeight;
-					if (h > 0) parent.postMessage({ __emailIframeHeight: true, height: h }, "*");
+		const layoutScript = `<script>
+			(function() {
+				var lastW = 0, lastNat = 0, lastH = 0, raf = 0;
+				function fit() {
+					raf = 0;
+					var doc = document.documentElement;
+					var body = document.body;
+					if (!doc || !body) return;
+					var avail = doc.clientWidth;
+					body.style.transform = "";
+					body.style.width = "";
+					body.style.maxWidth = "";
+					var natural = Math.max(body.scrollWidth, doc.scrollWidth);
+					var scale = (avail > 0 && natural > avail + 1) ? Math.max(0.3, avail / natural) : 1;
+					if (scale < 1) {
+						body.style.maxWidth = "none";
+						body.style.width = natural + "px";
+						body.style.transform = "scale(" + scale + ")";
+					}
+					var h = Math.max(Math.ceil(body.getBoundingClientRect().height), Math.ceil(body.scrollHeight * scale));
+					if (${autoSize ? "true" : "false"} && h > 0 && (avail !== lastW || natural !== lastNat || h !== lastH)) {
+						lastW = avail; lastNat = natural; lastH = h;
+						parent.postMessage({ __emailIframeHeight: true, height: h }, "*");
+					}
 				}
-				reportHeight();
-				window.addEventListener('load', reportHeight, { once: true });
-				window.addEventListener('resize', reportHeight);
-				if (typeof ResizeObserver === 'function') new ResizeObserver(reportHeight).observe(document.body);
-			<\/script>`
-			: "";
+				function schedule() { if (!raf) raf = requestAnimationFrame(fit); }
+				fit();
+				window.addEventListener("load", fit, { once: true });
+				window.addEventListener("resize", schedule);
+				if (typeof ResizeObserver === "function") new ResizeObserver(schedule).observe(document.documentElement);
+			})();
+		<\/script>`;
 
 		iframe.srcdoc = `<!DOCTYPE html>
 <html>
@@ -100,6 +120,8 @@ export default function EmailIframe({ body, autoSize }: EmailIframeProps) {
 html {
 	background: ${bg};
 	color-scheme: ${dark ? "dark" : "light"};
+	max-width: 100%;
+	overflow-x: hidden;
 }
 body {
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -109,15 +131,16 @@ body {
 	background: ${bg};
 	padding: ${padding};
 	margin: 0;
+	max-width: 100%;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
-	${autoSize ? "overflow: hidden;" : ""}
+	transform-origin: top left;
 }
 [style*="position: fixed"], [style*="position:fixed"], [style*="position: absolute"], [style*="position:absolute"] {
 	position: relative !important;
 }
-a { color: ${link}; }
-img { max-width: 100%; height: auto; }
+a { color: ${link}; overflow-wrap: anywhere; }
+img, svg, video { max-width: 100% !important; height: auto !important; }
 blockquote {
 	border-left: 3px solid ${quoteBorder};
 	padding-left: 1em;
@@ -128,26 +151,34 @@ pre {
 	background: ${preBg};
 	padding: 12px;
 	border-radius: 8px;
+	max-width: 100%;
 	overflow-x: auto;
 	font-size: 13px;
 }
-table { border-collapse: collapse; max-width: 100%; }
-td, th { padding: 4px 8px; }
+table { border-collapse: collapse; max-width: 100% !important; min-width: 0 !important; }
+td, th { padding: 4px 8px; min-width: 0 !important; }
 @media (max-width: 640px) {
-  body { font-size: 16px; padding: 12px; }
-  td, th { overflow-wrap: anywhere; }
+  body { font-size: 15px; padding: 12px; }
+  div, section, header, footer, article, main, table, thead, tbody, tfoot, tr, td, th {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  table, thead, tbody, tfoot, tr, td, th, div, p, span, li, a {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
 }
 p { margin: 4px 0; }
 h1, h2, h3 { margin: 8px 0 4px; }
 ul, ol { padding-left: 20px; margin: 4px 0; }
 </style>
 </head>
-<body>${cleanBody}${heightScript}</body>
+<body>${cleanBody}${layoutScript}</body>
 </html>`;
 	}, [body, autoSize, paperMode]);
 
 	return (
-		<div className={`relative ${autoSize ? "" : "h-full"}`}>
+		<div className={`relative w-full min-w-0 overflow-hidden ${autoSize ? "" : "h-full"}`}>
 			<button
 				type="button"
 				onClick={() => setPaperMode((mode) => (mode === "dark" ? "light" : "dark"))}
@@ -159,7 +190,7 @@ ul, ol { padding-left: 20px; margin: 4px 0; }
 			</button>
 			<iframe
 				ref={iframeRef}
-				className={`block w-full border border-kumo-line rounded-xl ${autoSize ? "" : "h-full border-0 rounded-none"}`}
+				className={`block w-full max-w-full min-w-0 border border-kumo-line rounded-xl ${autoSize ? "" : "h-full border-0 rounded-none"}`}
 				style={autoSize ? { height: `${height}px` } : { height: "100%" }}
 				sandbox="allow-scripts allow-popups allow-top-navigation-by-user-activation"
 				title="Email content"

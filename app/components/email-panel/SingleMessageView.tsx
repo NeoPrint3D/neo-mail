@@ -40,7 +40,7 @@ export default function SingleMessageView({
 				</div>
 			</div>
 
-			<div className="px-3 py-3 md:px-6">
+			<div className="min-w-0 px-3 py-3 md:px-6">
 				<EmailIframe autoSize
 					body={rewriteInlineImages(
 						email.body || "",
