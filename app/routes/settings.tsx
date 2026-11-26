@@ -198,14 +198,14 @@ function MailboxSettings({ mailbox }: { mailbox: Mailbox }) {
 				{aliases.length > 0 ? (
 					<ul className="divide-y divide-kumo-line rounded-xl border border-kumo-line">
 						{aliases.map((alias) => (
-							<li key={alias.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
-								<div className="min-w-0">
-									<div className="flex items-center gap-2">
-										<code className="text-sm font-medium">{alias.address}</code>
+							<li key={alias.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+								<div className="min-w-0 flex-1">
+									<div className="flex flex-wrap items-center gap-2">
+										<code className="break-all text-sm font-medium">{alias.address}</code>
 										{!alias.enabled && <Badge variant="outline">Paused</Badge>}
 									</div>
 									{alias.forwardTo.length > 0 && (
-										<p className="text-xs text-kumo-subtle">Also forwards to: {alias.forwardTo.join(", ")}</p>
+										<p className="break-all text-xs text-kumo-subtle">Also forwards to: {alias.forwardTo.join(", ")}</p>
 									)}
 								</div>
 								<Button

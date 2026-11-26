@@ -116,25 +116,25 @@ export default function MailWebhooks({ domains, selectedDomain }: { domains: str
 
 	return <>
 		<section className="settings-card space-y-4" aria-labelledby="webhooks-heading">
-			<div className="flex flex-wrap items-start justify-between gap-3">
-				<div className="min-w-0 flex-1 space-y-1">
+			<div className="space-y-1.5">
+				<div className="flex flex-wrap items-center justify-between gap-2">
 					<h2 id="webhooks-heading" className="flex items-center gap-2 font-semibold">
 						<LightningIcon size={18} /> Outbound webhooks
 					</h2>
-					<p className="text-xs text-kumo-subtle">
-						Send a signed HTTPS POST (<code>mail.received</code>) when mail arrives at an inbox or exact alias. Payloads include arrival IDs only—never message contents or attachments.
-					</p>
+					<Button
+						ref={addButton}
+						variant="secondary"
+						size="sm"
+						icon={<PlusIcon size={15} />}
+						disabled={query.isPending || !sources.length}
+						onClick={openDialog}
+					>
+						Add webhook
+					</Button>
 				</div>
-				<Button
-					ref={addButton}
-					variant="secondary"
-					size="sm"
-					icon={<PlusIcon size={15} />}
-					disabled={query.isPending || !sources.length}
-					onClick={openDialog}
-				>
-					Add webhook
-				</Button>
+				<p className="text-xs text-kumo-subtle">
+					Send a signed HTTPS POST (<code>mail.received</code>) when mail arrives at an inbox or exact alias. Payloads include arrival IDs only—never message contents or attachments.
+				</p>
 			</div>
 
 			{created && (

@@ -99,15 +99,19 @@
   .phone-folder-subject > span:first-child { display: block; overflow: hidden; text-overflow: ellipsis; }
   .settings-page { padding: 1rem .85rem calc(4.5rem + env(safe-area-inset-bottom)); }
   .settings-card { padding: .95rem; overflow-wrap: anywhere; }
+  .settings-card [data-slot="badge"], .settings-card .inline-flex.rounded-full { max-width: 100%; white-space: normal; height: auto; text-align: left; }
   .dkim-record-fields { grid-template-columns: minmax(0, 1fr) minmax(0, .75fr) auto; }
   .dkim-record-fields .field-label { min-width: 0; }
   .phone-settings-back { display: inline-flex; }
   .phone-domain-switch { display: block; }
   .desktop-domain-list { display: none; }
   .routing-domain-filter { width: 100%; }
-  .routing-rule-row { display: grid; align-items: start; }
-  .routing-rule-actions { justify-content: flex-end; }
-  .routing-rule-actions button { min-height: 44px; min-width: 44px; }
+  .routing-rule-row { display: flex; flex-direction: column; align-items: stretch; gap: .7rem; padding: .95rem; }
+  .routing-rule-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; padding-top: .6rem; border-top: 1px solid color-mix(in srgb, var(--color-kumo-line) 65%, transparent); }
+  .routing-rule-actions button { min-height: 44px; padding-inline: .85rem; border: 1px solid var(--color-kumo-line); border-radius: .65rem; background: var(--color-kumo-control); }
+  .routing-rule-actions button:hover:not(:disabled) { background: var(--color-kumo-tint); }
+  .routing-rule-actions button[aria-label^="Edit"] { min-width: 44px; padding-inline: 0; }
+  .routing-rule-actions button:is([aria-label^="Delete"], [aria-label^="Remove"]) { min-width: 44px; padding-inline: 0; margin-inline-start: auto; color: var(--text-color-kumo-danger); }
   .settings-page label:has(> input[type="checkbox"]) { min-height: 44px; }
   .directory-content { gap: .75rem; }
   .directory-heading p { max-width: 13rem; line-height: 1.4; }

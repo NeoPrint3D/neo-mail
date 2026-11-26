@@ -480,12 +480,12 @@ export default function RoutingRoute() {
 										</div>
 										<div className="flex flex-wrap items-center gap-2 text-xs text-kumo-subtle">
 											{fwd.forwardTo.length > 0 && (
-												<span className="inline-flex items-center gap-1 text-kumo-strong">
-													<ArrowRightIcon size={13} /> Forwards to {fwd.forwardTo.join(", ")}
+												<span className="inline-flex min-w-0 items-center gap-1 [overflow-wrap:anywhere] text-kumo-strong">
+													<ArrowRightIcon size={13} className="shrink-0" /> Forwards to {fwd.forwardTo.join(", ")}
 												</span>
 											)}
-											<span className="inline-flex items-center gap-1 text-kumo-strong">
-												<EnvelopeSimpleIcon size={13} />
+											<span className="inline-flex min-w-0 items-center gap-1 [overflow-wrap:anywhere] text-kumo-strong">
+												<EnvelopeSimpleIcon size={13} className="shrink-0" />
 												{fwd.keepCopy ? `Copy in ${fwd.mailboxId}` : "Forward only (no local copy)"}
 											</span>
 										</div>
@@ -526,7 +526,7 @@ export default function RoutingRoute() {
 								<li key={rule.id} className="routing-rule-row flex flex-wrap items-center gap-3 px-4 py-3.5 md:px-5">
 									<div className="min-w-0 flex-1 space-y-1">
 										<div className="flex flex-wrap items-center gap-2">
-											<code className="text-sm font-semibold">{rule.address}</code>
+											<code className="break-all text-sm font-semibold">{rule.address}</code>
 											<Badge variant="secondary">
 												{rule.matchType === "catch_all" ? "Catch-all" : "Alias"}
 											</Badge>
@@ -541,13 +541,13 @@ export default function RoutingRoute() {
 											) : (
 												<>
 													{rule.forwardTo.length > 0 && (
-														<span className="inline-flex items-center gap-1 text-kumo-strong">
-															<ArrowRightIcon size={13} /> Forwards to {rule.forwardTo.join(", ")}
+														<span className="inline-flex min-w-0 items-center gap-1 [overflow-wrap:anywhere] text-kumo-strong">
+															<ArrowRightIcon size={13} className="shrink-0" /> Forwards to {rule.forwardTo.join(", ")}
 														</span>
 													)}
 													{rule.deliverTo && (
-														<span className="inline-flex items-center gap-1 text-kumo-strong">
-															<EnvelopeSimpleIcon size={13} />
+														<span className="inline-flex min-w-0 items-center gap-1 [overflow-wrap:anywhere] text-kumo-strong">
+															<EnvelopeSimpleIcon size={13} className="shrink-0" />
 															{rule.forwardTo.length ? `Copy in ${rule.deliverTo}` : `Delivers to ${rule.deliverTo}`}
 														</span>
 													)}
