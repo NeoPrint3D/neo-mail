@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="NeoMail">
+  <!-- Original NeoMail artwork, replacing the upstream favicon. -->
+  <path fill="#152631" d="M0 0h512v512H0z"/>
+  <circle cx="256" cy="256" r="171" fill="#1b303b"/>
+  <rect x="124" y="160" width="264" height="192" rx="42" fill="#a8f4d8"/>
+  <path d="M143 185l97 77q16 13 32 0l97-77" fill="none" stroke="#1e3c42" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m152 320 62-57m146 57-62-57" fill="none" stroke="#4a897d" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="358" cy="170" r="24" fill="#13212a"/>
+  <path d="M358 142c3 15 12 24 28 28-16 3-25 12-28 28-4-16-13-25-28-28 15-4 24-13 28-28Z" fill="#c4ffe5"/>
+</svg>

@@ -1,0 +1,13 @@
+NeoMail
+
+NeoMail is a modified distribution of Cloudflare's Agentic Inbox.
+The upstream source is copyright (c) 2026 Cloudflare, Inc. and is licensed
+under the Apache License, Version 2.0. The original license and applicable
+copyright notices are retained. This project is independent of Cloudflare.
+
+Upstream source: https://github.com/cloudflare/agentic-inbox
+Imported revision: 48039bb6785af34e592c2966f87cde2b255c4c80
+
+NeoMail modifications are distributed under the Apache License, Version 2.0.
+See LICENSE for the license and MODIFICATIONS.md for the change notice.
+Dependencies carry their own licenses; see public/open-source-notices.txt.

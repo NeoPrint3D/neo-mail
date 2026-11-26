@@ -1,0 +1,24 @@
+services:
+  inbox:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3000"
+      DATA_DIR: /data
+    ports:
+      - "127.0.0.1:3000:3000"
+      # For public inbound SMTP, set SMTP_INBOUND_PORT=2525 in .env and uncomment:
+      # - "25:2525"
+    volumes:
+      - mail-data:/data
+      # Mount STARTTLS certs read-only if you enable SMTP_TLS_KEY and SMTP_TLS_CERT.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+volumes:
+  mail-data:

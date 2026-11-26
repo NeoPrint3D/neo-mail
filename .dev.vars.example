@@ -1,0 +1,7 @@
+# Modified for NeoMail; see NOTICE and MODIFICATIONS.md.
+# Local Wrangler only. Generate a new value for your own dev environment.
+SETUP_CODE=replace-with-a-random-setup-code
+# Avoid using production Cloudflare API credentials during local testing.
+# CLOUDFLARE_TOKEN=
+# WEB_PUSH_VAPID=
+# CLOUDFLARE_ACCOUNT_ID=

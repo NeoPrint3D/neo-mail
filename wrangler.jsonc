@@ -1,0 +1,28 @@
+{
+	// Modified for NeoMail; see NOTICE and MODIFICATIONS.md.
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "neomail",
+	"main": "./workers/app.ts",
+	"compatibility_date": "2026-03-12",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"preview_urls": false,
+	// Add your own custom domain, or use the generated workers.dev URL.
+	// "routes": [{ "pattern": "mail.example.com", "custom_domain": true }],
+	"assets": { "directory": "./build/client" },
+	"vars": { "CLOUDFLARE_WORKER_NAME": "neomail", "MCP_ALLOW_SEND": "false" },
+	"send_email": [{ "name": "EMAIL" }],
+	"r2_buckets": [{ "binding": "BUCKET", "bucket_name": "neomail-mail" }],
+	"durable_objects": {
+		"bindings": [
+			{ "name": "MAILBOX", "class_name": "MailboxDO" },
+			{ "name": "WORKSPACE", "class_name": "WorkspaceDO" }
+		]
+	},
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["MailboxDO"] },
+		{ "tag": "v2", "new_sqlite_classes": ["EmailAgent"] },
+		{ "tag": "v3", "new_sqlite_classes": ["EmailMCP"] },
+		{ "tag": "v4", "new_sqlite_classes": ["WorkspaceDO"] }
+	]
+}

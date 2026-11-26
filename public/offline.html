@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#131820">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NeoMail">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));display:grid;place-items:center;background:#131820;color:#e8eef7;font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.card{max-width:390px;text-align:center}.icon{width:72px;height:72px;margin:0 auto 24px;border-radius:21px;box-shadow:0 12px 34px #02081780}h1{margin:0 0 10px;font-size:25px;letter-spacing:-.03em}p{margin:0;color:#9cacc0}button{margin-top:24px;min-height:46px;padding:0 20px;border:0;border-radius:14px;background:#90e7c7;color:#121b23;font:inherit;font-weight:600}
+  </style>
+  <title>You're offline · NeoMail</title>
+</head>
+<body>
+  <main class="card">
+    <img class="icon" src="/icons/inbox-192.png" alt="">
+    <h1>Reconnect to your inbox</h1>
+    <p>NeoMail needs a connection to securely load your mail. Your messages aren't stored for offline access on this device.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </main>
+</body>
+</html>

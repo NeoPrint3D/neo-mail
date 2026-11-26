@@ -1,0 +1,14 @@
+{
+	"extends": "./tsconfig.json",
+	"include": ["workers/**/*.ts", "server/**/*.ts", "shared/**/*.ts"],
+	"compilerOptions": {
+		"composite": true,
+		"checkJs": false,
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"lib": ["ES2023"],
+		"types": ["@cloudflare/workers-types", "node"],
+		"esModuleInterop": true
+	}
+}

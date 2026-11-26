@@ -1,0 +1,16 @@
+// Modified for NeoMail; see NOTICE and MODIFICATIONS.md.
+{
+	"files": [],
+	"references": [
+		{ "path": "./tsconfig.node.json" },
+		{ "path": "./tsconfig.app.json" },
+		{ "path": "./tsconfig.workers.json" }
+	],
+	"compilerOptions": {
+		"checkJs": true,
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"noEmit": true
+	}
+}
