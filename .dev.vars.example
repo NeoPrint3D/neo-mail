@@ -4,4 +4,5 @@ SETUP_CODE=replace-with-a-random-setup-code
 # Avoid using production Cloudflare API credentials during local testing.
 # CLOUDFLARE_TOKEN=
 # WEB_PUSH_VAPID=
+# WEBHOOK_ALLOWED_ORIGINS=https://hooks.example.com
 # CLOUDFLARE_ACCOUNT_ID=

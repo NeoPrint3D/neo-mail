@@ -97,7 +97,7 @@
   .phone-search-result { min-height: 75px; padding: .45rem .85rem; }
   .phone-search-result .search-result-unread { display: none; }
   .phone-folder-subject > span:first-child { display: block; overflow: hidden; text-overflow: ellipsis; }
-  .settings-page { padding: 1rem .85rem calc(1.2rem + env(safe-area-inset-bottom)); }
+  .settings-page { padding: 1rem .85rem calc(4.5rem + env(safe-area-inset-bottom)); }
   .settings-card { padding: .95rem; overflow-wrap: anywhere; }
   .dkim-record-fields { grid-template-columns: minmax(0, 1fr) minmax(0, .75fr) auto; }
   .dkim-record-fields .field-label { min-width: 0; }

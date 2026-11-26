@@ -58,6 +58,7 @@ test("Cloudflare Worker: first-run auth, multi-domain mail, forwarding, R2, and 
 	assert.equal((await http(asset)).status, 200);
 	assert.equal((await http("/api/v1/mailboxes")).status, 401);
 	assert.equal((await http("/api/auth/push")).status, 401);
+	assert.equal((await http("/api/v1/webhooks")).status, 401);
 	const credentials = { email: "owner@example.test", password: "worker-test-password-2026" };
 	await json("/api/auth/setup", 401, { ...credentials, code: "wrong" });
 	assert.equal((await http("/api/auth/setup", { method: "POST", headers: { Origin: "https://unrelated.example" } })).status, 403);
@@ -139,6 +140,24 @@ test("Cloudflare Worker: first-run auth, multi-domain mail, forwarding, R2, and 
 	assert.equal(jobsInbox.length, 2);
 	assert.ok(jobsInbox.some(({ subject }) => subject === "Store and forward existing inbox mail"));
 	await json(forwardPath, 200, { ...saved, enabled: false }, "PUT");
+
+	// Outbound webhooks: list eligible sources, validate destination, toggle, and delete.
+	const hooksBefore = await json("/api/v1/webhooks");
+	assert.deepEqual(hooksBefore.webhooks, []);
+	assert.ok(hooksBefore.sources.includes(a));
+	assert.ok(hooksBefore.sources.includes(alias));
+	assert.ok(!hooksBefore.sources.some((src) => src.startsWith("*@")));
+	await json("/api/v1/webhooks", 400, { recipient: alias, endpoint: "https://unapproved.example.test/hook" });
+	await json("/api/v1/webhooks", 400, { recipient: "missing@first.test", endpoint: "https://hooks.zapier.com/hooks/catch/1/a" });
+	assert.equal((await http("/api/v1/webhooks", { method: "POST", headers: { Origin: "https://unrelated.example" }, body: "{}" })).status, 403);
+	const createdHook = await json("/api/v1/webhooks", 201, { recipient: alias, endpoint: "https://hooks.zapier.com/hooks/catch/123/abc/" });
+	assert.ok(createdHook.secret);
+	assert.equal(createdHook.webhook.origin, "https://hooks.zapier.com");
+	assert.equal((await json("/api/v1/webhooks")).webhooks.length, 1);
+	await json(`/api/v1/webhooks/${createdHook.webhook.id}`, 204, { enabled: false }, "PUT");
+	assert.equal((await json("/api/v1/webhooks")).webhooks[0].enabled, false);
+	await json(`/api/v1/webhooks/${createdHook.webhook.id}`, 204, undefined, "DELETE");
+	assert.deepEqual((await json("/api/v1/webhooks")).webhooks, []);
 
 	const outgoing = await json(`${mb(a)}/emails`, 201, { from: { name: "Help", email: alias }, to: ["one@example.net"], bcc: "hidden@example.net", subject: "Outbound fixture", text: "Hello", attachments: [
 		{ filename: "note.txt", type: "text/plain", disposition: "attachment", content: "SGVsbG8=" },

@@ -3,6 +3,7 @@ import { AuthStore } from "../server/auth";
 import { DomainSchema, Domains } from "../server/domains";
 import { PushStore } from "../server/push";
 import { RoutingStore } from "../server/routing";
+import { WebhookStore } from "../server/webhooks";
 import { storageAdapter } from "./sqlite";
 import type { Bindings } from "./types";
 
@@ -12,6 +13,7 @@ export class WorkspaceDO extends DurableObject<Bindings> {
 	private readonly domains: Domains;
 	private readonly routing: RoutingStore;
 	private readonly push: PushStore;
+	private readonly webhooks: WebhookStore;
 
 	constructor(ctx: DurableObjectState, env: Bindings) {
 		super(ctx, env);
@@ -20,6 +22,7 @@ export class WorkspaceDO extends DurableObject<Bindings> {
 		this.domains = new Domains(db);
 		this.routing = new RoutingStore(db);
 		this.push = new PushStore(db);
+		this.webhooks = new WebhookStore(db);
 		// One-time bootstrap for existing Worker deployments; edits in the UI remain authoritative.
 		ctx.storage.transactionSync(() => {
 			db.exec("CREATE TABLE IF NOT EXISTS workspace_bootstrap (id INTEGER PRIMARY KEY)");
@@ -57,6 +60,14 @@ export class WorkspaceDO extends DurableObject<Bindings> {
 	pushRemove(...args: Parameters<PushStore["remove"]>) { this.push.remove(...args); }
 	pushRemoveForSession(...args: Parameters<PushStore["removeForSession"]>) { this.push.removeForSession(...args); }
 	pushClear() { this.push.clear(); }
+	webhookList(...args: Parameters<WebhookStore["list"]>) { return this.webhooks.list(...args); }
+	webhookCreate(...args: Parameters<WebhookStore["create"]>) { return this.webhooks.create(...args); }
+	webhookGet(...args: Parameters<WebhookStore["get"]>) { return this.webhooks.get(...args); }
+	webhookForRecipient(...args: Parameters<WebhookStore["forRecipient"]>) { return this.webhooks.forRecipient(...args); }
+	webhookSetEnabled(...args: Parameters<WebhookStore["setEnabled"]>) { return this.webhooks.setEnabled(...args); }
+	webhookDelete(...args: Parameters<WebhookStore["delete"]>) { return this.webhooks.delete(...args); }
+	webhookClaim(...args: Parameters<WebhookStore["claim"]>) { return this.webhooks.claim(...args); }
+	webhookRecord(...args: Parameters<WebhookStore["record"]>) { return this.webhooks.record(...args); }
 	routingList(...args: Parameters<RoutingStore["list"]>) { return this.routing.list(...args); }
 	routingListForMailbox(...args: Parameters<RoutingStore["listForMailbox"]>) { return this.routing.listForMailbox(...args); }
 	routingGet(...args: Parameters<RoutingStore["get"]>) { return this.routing.get(...args); }

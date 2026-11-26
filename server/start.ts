@@ -13,6 +13,7 @@ import { Domains, hostName } from "./domains";
 import { sendEmail, smtpTransport } from "./email-sender";
 import { loadPushKeys, PushStore } from "./push";
 import { RoutingStore } from "./routing";
+import { webhookOrigins, WebhookStore } from "./webhooks";
 import { listenForMail } from "./smtp";
 import { SQLiteStore } from "./sqlite";
 import { BlobStore, Mailboxes } from "./storage";
@@ -53,6 +54,8 @@ const env: Env = {
 	AUTH: auth,
 	PUSH_KEYS: pushKeys,
 	PUSH_DEVICES: new PushStore(catalog.db),
+	WEBHOOKS: new WebhookStore(catalog.db),
+	WEBHOOK_ALLOWED_ORIGINS: webhookOrigins(process.env.WEBHOOK_ALLOWED_ORIGINS),
 	DNS: new Resolver({ timeout: 1800, tries: 1 }),
 	DOMAINS: new Domains(catalog.db, process.env.DOMAINS, mailHostname),
 	ROUTING: new RoutingStore(catalog.db),

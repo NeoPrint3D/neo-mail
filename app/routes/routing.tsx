@@ -16,6 +16,7 @@ import { Link, useSearchParams } from "react-router";
 import type { CloudflareRoutingSyncResult, RoutingAction, RoutingMatchType, RoutingRule, RoutingRuleInput } from "shared/routing";
 import InboxForwardingForm from "~/components/InboxForwardingForm";
 import { ForwardingDestinations } from "~/components/ForwardingDestinations";
+import MailWebhooks from "~/components/MailWebhooks";
 import MailboxSelect from "~/components/MailboxSelect";
 import SearchSelect, { textChoices } from "~/components/SearchSelect";
 import WorkspaceFrame from "~/components/WorkspaceFrame";
@@ -265,6 +266,7 @@ export default function RoutingRoute() {
 		await Promise.all([
 			cache.invalidateQueries({ queryKey: ["routing"] }),
 			cache.invalidateQueries({ queryKey: queryKeys.mailboxes.all }),
+			cache.invalidateQueries({ queryKey: ["webhooks"] }),
 		]);
 	};
 
@@ -501,6 +503,7 @@ export default function RoutingRoute() {
 						</ul>
 					</section>
 				)}
+				<MailWebhooks domains={domains} selectedDomain={selectedDomain} />
 			</div>
 
 			{dialogOpen && (

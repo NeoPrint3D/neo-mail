@@ -10,6 +10,7 @@ export interface Bindings {
 	APP_URL?: string;
 	SETUP_CODE?: string;
 	WEB_PUSH_VAPID?: string;
+	WEBHOOK_ALLOWED_ORIGINS?: string;
 	CLOUDFLARE_TOKEN?: string;
 	CLOUDFLARE_WORKER_NAME?: string;
 	CLOUDFLARE_ACCOUNT_ID?: string;

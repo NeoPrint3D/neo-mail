@@ -12,6 +12,7 @@ import { app as apiApp } from "./index";
 import { handleMcp } from "./mcp";
 import { pushRoutes } from "./push-routes";
 import { routingRoutes } from "./routing-routes";
+import { webhookRoutes } from "./webhook-routes";
 import type { Env } from "./types";
 
 export function createApp(render: (request: Request) => Response | Promise<Response>) {
@@ -66,13 +67,14 @@ export function createApp(render: (request: Request) => Response | Promise<Respo
 			if (path.startsWith("/api/")) return c.json({ error: "Sign in to continue" }, 401);
 			return c.redirect(await c.env.AUTH.configured() ? "/login" : "/setup");
 		}
-		return reads ? next() : (path.startsWith("/api/auth/") || path.startsWith("/api/v1/domains") || path.startsWith("/api/v1/routing") ? smallBody : largeBody)(c, next);
+		return reads ? next() : (path.startsWith("/api/auth/") || path.startsWith("/api/v1/domains") || path.startsWith("/api/v1/routing") || path.startsWith("/api/v1/webhooks") ? smallBody : largeBody)(c, next);
 	});
 	app.all("/mcp", (c) => handleMcp(c.req.raw, c.env, c.var.mcpScope));
 	app.route("/", accountRoutes);
 	app.route("/", pushRoutes);
 	app.route("/", domainRoutes);
 	app.route("/", routingRoutes);
+	app.route("/", webhookRoutes);
 	app.route("/", apiApp);
 	app.all("/api/*", (c) => c.json({ error: "Endpoint not found" }, 404));
 	app.all("*", (c) => render(c.req.raw));

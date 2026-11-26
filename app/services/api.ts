@@ -8,6 +8,7 @@ import type { CloudflareMailStatus, ForwardingDestination } from "shared/cloudfl
 import type { McpIssuablePermission, McpScope, McpToken } from "shared/mcp";
 import type { OutgoingAttachment } from "shared/attachments";
 import type { PushDevice, PushSettings } from "shared/push";
+import type { MailWebhook } from "shared/webhooks";
 import type { DomainConfig, DomainResult, DnsCheck, DnsRecord } from "shared/dns";
 import type { CloudflareRoutingSyncResult, RoutingRule, RoutingRuleInput } from "shared/routing";
 
@@ -141,6 +142,11 @@ const api = {
 	updateRoutingRule: (id: string, data: RoutingRuleInput) => put<RoutingRule>(`/api/v1/routing/${encodeURIComponent(id)}`, data),
 	deleteRoutingRule: (id: string) => del<void>(`/api/v1/routing/${encodeURIComponent(id)}`),
 	syncCloudflareRouting: (domain: string) => post<CloudflareRoutingSyncResult[]>("/api/v1/routing/sync-cloudflare", { domain, confirmed: true }),
+	listWebhooks: () => get<{ webhooks: MailWebhook[]; sources: string[]; allowedOrigins: string[] }>("/api/v1/webhooks"),
+	createWebhook: (data: { recipient: string; endpoint: string }) => post<{ webhook: MailWebhook; secret: string }>("/api/v1/webhooks", data),
+	updateWebhook: (id: string, enabled: boolean) => put<void>(`/api/v1/webhooks/${encodeURIComponent(id)}`, { enabled }),
+	deleteWebhook: (id: string) => del<void>(`/api/v1/webhooks/${encodeURIComponent(id)}`),
+	testWebhook: (id: string) => post<{ status: number | null }>(`/api/v1/webhooks/${encodeURIComponent(id)}/test`),
 	// Config
 	getConfig: () =>
 		get<{ domains: string[]; emailAddresses: string[]; mcpAllowSend: boolean; smtpAvailable: boolean; platform?: "cloudflare" }>("/api/v1/config"),

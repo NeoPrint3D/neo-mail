@@ -231,10 +231,19 @@ test("standalone login, DNS setup, two-domain real SMTP and MCP", { timeout: 90_
 	assert.equal(webhookRes.status, 200, await webhookRes.clone().text());
 	assert.equal(relayed.length, beforeWebhook + 1);
 
+	const hooksInfo = await json("/api/v1/webhooks");
+	assert.ok(hooksInfo.sources.includes(salesAlias));
+	assert.ok(hooksInfo.sources.includes(a));
+	const hookRes = await post("/api/v1/webhooks", { recipient: salesAlias, endpoint: "https://hooks.zapier.com/hooks/catch/99/xyz/" }, 201);
+	assert.ok(hookRes.secret);
+	assert.equal((await fetchLocal(`/api/v1/webhooks/${hookRes.webhook.id}`, { method: "PUT", body: JSON.stringify({ enabled: false }) })).status, 204);
+	assert.equal((await fetchLocal(`/api/v1/webhooks/${hookRes.webhook.id}`, { method: "DELETE" })).status, 204);
+
 	// Toggle/cleanup routing rules checks.
 	assert.equal((await json(`/api/v1/routing?domain=${domainA}`)).rules.length, 3);
 	await json(`/api/v1/routing/${salesRule.id}`, { method: "PUT", body: JSON.stringify({ domain: domainA, matchType: "exact", localPart: "sales", action: "forward", forwardTo: ["owner@outside.test"], enabled: false }) });
 	await assert.rejects(deliver(salesAlias, "Subject: Paused\r\n\r\nPaused"), /550 Mailbox unavailable/);
+	assert.equal((await json("/api/v1/webhooks")).sources.includes(salesAlias), false);
 	assert.equal((await fetchLocal(`/api/v1/routing/${salesRule.id}`, { method: "DELETE" })).status, 204);
 	assert.equal((await fetchLocal(`/api/v1/routing/${supportRule.id}`, { method: "DELETE" })).status, 204);
 	const first = await json("/api/v1/workspace/emails?limit=1");

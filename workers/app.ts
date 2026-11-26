@@ -8,6 +8,7 @@ import * as build from "../build/server/index.js";
 import { createApp } from "../server/app";
 import { receiveEmail } from "../server/index";
 import { loadPushKeys } from "../server/push";
+import { webhookOrigins } from "../server/webhooks";
 import type { Mailbox, Env } from "../server/types";
 import { cloudflareMail } from "./cloudflare-mail";
 import { dohResolver } from "./dns";
@@ -36,6 +37,17 @@ function environment(bindings: Bindings, ctx: ExecutionContext, requestIp?: stri
 			clear: () => ws.pushClear(),
 		},
 		waitUntil: (job) => ctx.waitUntil(job),
+		WEBHOOKS: {
+			list: (...args) => ws.webhookList(...args),
+			create: (...args) => ws.webhookCreate(...args),
+			get: (...args) => ws.webhookGet(...args),
+			forRecipient: (...args) => ws.webhookForRecipient(...args),
+			setEnabled: (...args) => ws.webhookSetEnabled(...args),
+			delete: (...args) => ws.webhookDelete(...args),
+			claim: (...args) => ws.webhookClaim(...args),
+			record: (...args) => ws.webhookRecord(...args),
+		},
+		WEBHOOK_ALLOWED_ORIGINS: webhookOrigins(bindings.WEBHOOK_ALLOWED_ORIGINS),
 		AUTH: {
 			configured: (...args) => ws.authConfigured(...args),
 			canSetup: (...args) => ws.authCanSetup(...args),

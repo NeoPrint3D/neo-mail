@@ -1,4 +1,5 @@
 import type { PushKeys, PushStore } from "./push";
+import type { WebhookStore } from "./webhooks";
 import type { AuthStore } from "./auth";
 import type { Domains, DnsResolver } from "./domains";
 import type { RoutingStore } from "./routing";
@@ -42,6 +43,8 @@ export interface Env {
 	PUSH_DEVICES?: Remote<PushStore>;
 	PUSH_KEYS?: PushKeys;
 	waitUntil?: (job: Promise<unknown>) => void;
+	WEBHOOKS?: Remote<WebhookStore>;
+	WEBHOOK_ALLOWED_ORIGINS?: string[];
 	DOMAINS: Remote<Domains>;
 	ROUTING: Remote<RoutingStore>;
 	STORE: BlobRepository;

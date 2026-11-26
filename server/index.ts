@@ -18,6 +18,7 @@ import {
 import { AttachmentListSchema, SendEmailRequestSchema } from "./lib/schemas";
 import { handleReplyEmail, handleForwardEmail } from "./routes/reply-forward";
 import { notifyInbox } from "./push";
+import { notifyWebhooks } from "./webhooks";
 import { Folders } from "../shared/folders";
 import type { Env } from "./types";
 import { requireMailbox, type MailboxContext } from "./lib/mailbox";
@@ -448,13 +449,17 @@ async function receiveEmail(event: { to: string; raw: ReadableStream<Uint8Array>
 		targets = event.forwardedAlready ? [] : targets.filter((target) => !localDomains.has(addressDomain(target)));
 		if (!plan.deliverTo) {
 			if (!targets.length) event.setReject("No external destination available for forwarding");
-			else await forwardAll(event.forward, targets);
+			else {
+				await forwardAll(event.forward, targets);
+				notifyWebhooks(env, plan.recipient);
+			}
 			return;
 		}
 	}
 	const rawEmail = await streamToArrayBuffer(event.raw, event.rawSize);
 	const parsedEmail = await new PostalMime().parse(rawEmail);
 
+	let storedLocally = false;
 	if (plan.deliverTo && await env.STORE.head(`mailboxes/${plan.deliverTo}.json`)) {
 		const targetMailboxId = plan.deliverTo;
 		const allRecipients = (parsedEmail.to || []).flatMap((item) => item.address ? [normalizeAddress(item.address)] : []);
@@ -507,13 +512,16 @@ async function receiveEmail(event: { to: string; raw: ReadableStream<Uint8Array>
 			thread_id: threadId, message_id: originalMessageId,
 			raw_headers: env.platform && serializedHeaders.length > 70_000 ? JSON.stringify(headers.filter(({ key }) => ["from", "to", "subject", "date", "message-id"].includes(key)).map(({ key, value }) => ({ key, value: value.slice(0, 512) }))) : serializedHeaders,
 		}, attachmentData);
+		storedLocally = true;
 		notifyInbox(env, targetMailboxId);
+		notifyWebhooks(env, plan.recipient, targetMailboxId, messageId);
 	}
 
 	if (targets.length > 0) {
 		try {
 			if (event.forward) await forwardAll(event.forward, targets);
 			else await forwardInboundEmail(env, plan.recipient, targets, parsedEmail);
+			if (!storedLocally) notifyWebhooks(env, plan.recipient);
 		} catch (error) {
 			if (!plan.deliverTo) {
 				throw error;
